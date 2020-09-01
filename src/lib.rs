@@ -23,19 +23,19 @@ impl std::error::Error for UboundOrbitalState {}
 
 // ============================================================================
 #[derive(Clone, Copy)]
-pub struct PointMass(f64, f64, f64, f64, f64);
+pub struct PointMass(pub f64, pub f64, pub f64, pub f64, pub f64);
 
 #[derive(Clone, Copy)]
-pub struct OrbitalState(PointMass, PointMass);
+pub struct OrbitalState(pub PointMass, pub PointMass);
 
 #[derive(Clone, Copy)]
-pub struct OrbitalElements(f64, f64, f64, f64);
+pub struct OrbitalElements(pub f64, pub f64, pub f64, pub f64);
 
 #[derive(Clone, Copy)]
-pub struct OrbitalOrientation(f64, f64, f64, f64, f64, f64);
+pub struct OrbitalOrientation(pub f64, pub f64, pub f64, pub f64, pub f64, pub f64);
 
 #[derive(Clone, Copy)]
-pub struct OrbitalParameters(OrbitalElements, OrbitalOrientation);
+pub struct OrbitalParameters(pub OrbitalElements, pub OrbitalOrientation);
 
 
 
@@ -196,9 +196,9 @@ impl OrbitalState
         return self.0.angular_momentum() + self.1.angular_momentum();
     }
 
-    pub fn potential(self, x: f64, y: f64, softening_length: f64) -> f64
+    pub fn gravitational_potential(self, x: f64, y: f64, softening_length: f64) -> f64
     {
-        return self.0.potential(x, y, softening_length) + self.1.potential(x, y, softening_length);
+        return self.0.gravitational_potential(x, y, softening_length) + self.1.gravitational_potential(x, y, softening_length);
     }
 
     pub fn total_energy(self) -> f64
@@ -409,15 +409,20 @@ impl OrbitalElements
         return OrbitalState(c1, c2);
     }
 
+    pub fn orbital_state_from_time(self, t: f64) -> OrbitalState
+    {
+        self.orbital_state_from_eccentric_anomaly(self.eccentric_anomaly(t))
+    }
+
     /**
      * Generate the orbital state vector for the given orbital elements and
      * orientation.
      *
-     * * o  -    The orbital orientation
      * * t  -    The time
+     * * o  -    The orbital orientation
      */
-    pub fn orbital_state_from_time_and_orientation(self, o: OrbitalOrientation, t: f64) -> OrbitalState
+    pub fn orbital_state_from_time_and_orientation(self, t: f64, o: OrbitalOrientation) -> OrbitalState
     {
-        self.orbital_state_from_eccentric_anomaly(self.eccentric_anomaly(t - o.periapse_time())).transform(o)
+        self.orbital_state_from_time(t - o.periapse_time()).transform(o)
     }
 }
