@@ -22,19 +22,19 @@ impl std::error::Error for UboundOrbitalState {}
 
 
 // ============================================================================
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct PointMass(pub f64, pub f64, pub f64, pub f64, pub f64);
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct OrbitalState(pub PointMass, pub PointMass);
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct OrbitalElements(pub f64, pub f64, pub f64, pub f64);
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct OrbitalOrientation(pub f64, pub f64, pub f64, pub f64, pub f64, pub f64);
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct OrbitalParameters(pub OrbitalElements, pub OrbitalOrientation);
 
 
@@ -74,6 +74,16 @@ impl OrbitalOrientation
     pub fn cm_velocity_y    (self) -> f64 { self.3 }
     pub fn periapse_argument(self) -> f64 { self.4 }
     pub fn periapse_time    (self) -> f64 { self.5 }
+}
+
+
+
+
+// ============================================================================
+impl OrbitalParameters
+{
+    pub fn elements    (self) -> OrbitalElements    { self.0 }
+    pub fn orientation (self) -> OrbitalOrientation { self.1 }
 }
 
 
@@ -211,7 +221,7 @@ impl OrbitalState
      * This function rotates the position and velocity vectors according to the
      * argument of periapse, and translates them according to the center-of-mass
      * position and velocity. Note that the time-of-last-periapse-passage is
-     * technically part of the orbital orientation, but is not used by this
+     * technically part of the orbital orientation, but is ignored by this
      * function, as that would change the intrinsic orbital phase.
      *
      * # Arguments
@@ -424,5 +434,73 @@ impl OrbitalElements
     pub fn orbital_state_from_time_and_orientation(self, t: f64, o: OrbitalOrientation) -> OrbitalState
     {
         self.orbital_state_from_time(t - o.periapse_time()).transform(o)
+    }
+}
+
+
+
+
+// ============================================================================
+impl std::ops::Add<OrbitalElements> for OrbitalElements { type Output = Self; fn add(self, u: OrbitalElements) -> OrbitalElements { OrbitalElements(self.0 + u.0, self.1 + u.1, self.2 + u.2, self.3 + u.3) } }
+impl std::ops::Sub<OrbitalElements> for OrbitalElements { type Output = Self; fn sub(self, u: OrbitalElements) -> OrbitalElements { OrbitalElements(self.0 - u.0, self.1 - u.1, self.2 - u.2, self.3 - u.3) } }
+impl std::ops::Mul<f64> for OrbitalElements { type Output = OrbitalElements; fn mul(self, a: f64) -> OrbitalElements { OrbitalElements(self.0 * a, self.1 * a, self.2 * a, self.3 * a) } }
+impl std::ops::Div<f64> for OrbitalElements { type Output = OrbitalElements; fn div(self, a: f64) -> OrbitalElements { OrbitalElements(self.0 / a, self.1 / a, self.2 / a, self.3 / a) } }
+
+
+// ============================================================================
+impl std::ops::Add<OrbitalOrientation> for OrbitalOrientation { type Output = Self; fn add(self, u: OrbitalOrientation) -> OrbitalOrientation { OrbitalOrientation(self.0 + u.0, self.1 + u.1, self.2 + u.2, self.3 + u.3, self.4 + u.4, self.5 + u.5) } }
+impl std::ops::Sub<OrbitalOrientation> for OrbitalOrientation { type Output = Self; fn sub(self, u: OrbitalOrientation) -> OrbitalOrientation { OrbitalOrientation(self.0 - u.0, self.1 - u.1, self.2 - u.2, self.3 - u.3, self.4 - u.4, self.5 - u.5) } }
+impl std::ops::Mul<f64> for OrbitalOrientation { type Output = OrbitalOrientation; fn mul(self, a: f64) -> OrbitalOrientation { OrbitalOrientation(self.0 * a, self.1 * a, self.2 * a, self.3 * a, self.4 * a, self.5 * a) } }
+impl std::ops::Div<f64> for OrbitalOrientation { type Output = OrbitalOrientation; fn div(self, a: f64) -> OrbitalOrientation { OrbitalOrientation(self.0 / a, self.1 / a, self.2 / a, self.3 / a, self.4 / a, self.5 / a) } }
+
+
+// ============================================================================
+impl std::ops::Add<OrbitalParameters> for OrbitalParameters { type Output = Self; fn add(self, u: OrbitalParameters) -> OrbitalParameters { OrbitalParameters(self.0 + u.0, self.1 + u.1) } }
+impl std::ops::Sub<OrbitalParameters> for OrbitalParameters { type Output = Self; fn sub(self, u: OrbitalParameters) -> OrbitalParameters { OrbitalParameters(self.0 - u.0, self.1 - u.1) } }
+impl std::ops::Mul<f64> for OrbitalParameters { type Output = OrbitalParameters; fn mul(self, a: f64) -> OrbitalParameters { OrbitalParameters(self.0 * a, self.1 * a) } }
+impl std::ops::Div<f64> for OrbitalParameters { type Output = OrbitalParameters; fn div(self, a: f64) -> OrbitalParameters { OrbitalParameters(self.0 / a, self.1 / a) } }
+
+
+// ============================================================================
+impl OrbitalElements     { pub fn small(self, e: f64) -> bool { self.0.abs() < e && self.1.abs() < e && self.2.abs() < e && self.3.abs() < e } }
+impl OrbitalOrientation  { pub fn small(self, e: f64) -> bool { self.0.abs() < e && self.1.abs() < e && self.2.abs() < e && self.3.abs() < e && self.4.abs() < e && self.5.abs() < e } }
+impl OrbitalParameters   { pub fn small(self, e: f64) -> bool { self.0.small(e) && self.1.small(e) } }
+
+
+
+
+// ============================================================================
+#[cfg(test)]
+mod tests
+{
+    use super::*;
+
+    fn panic_unless_recovery_is_accurate(t: f64, elements: OrbitalElements, orientation: OrbitalOrientation)
+    {
+        let parameters = OrbitalParameters(elements, orientation);
+        let state = elements.orbital_state_from_time_and_orientation(t, orientation);
+        let recovered_parameters = state.recover_orbital_parameters(t).unwrap();
+        assert!((parameters - recovered_parameters).small(1e-12));
+    }
+
+    #[test]
+    fn can_recover_parameters_for_standard_oriented_orbits()
+    {
+        panic_unless_recovery_is_accurate(0.3, OrbitalElements(1.0, 1.0, 1.0, 0.1), OrbitalOrientation(0.0, 0.0, 0.0, 0.0, 0.0, 0.0));
+        panic_unless_recovery_is_accurate(0.3, OrbitalElements(0.9, 1.0, 1.0, 0.1), OrbitalOrientation(0.0, 0.0, 0.0, 0.0, 0.0, 0.0));
+        panic_unless_recovery_is_accurate(0.3, OrbitalElements(1.0, 0.9, 1.0, 0.1), OrbitalOrientation(0.0, 0.0, 0.0, 0.0, 0.0, 0.0));
+        panic_unless_recovery_is_accurate(0.3, OrbitalElements(1.0, 1.0, 0.9, 0.1), OrbitalOrientation(0.0, 0.0, 0.0, 0.0, 0.0, 0.0));
+        panic_unless_recovery_is_accurate(0.3, OrbitalElements(1.0, 1.0, 1.0, 0.9), OrbitalOrientation(0.0, 0.0, 0.0, 0.0, 0.0, 0.0));
+    }
+
+    #[test]
+    fn can_recover_parameters_for_nonstandard_oriented_orbits()
+    {
+        panic_unless_recovery_is_accurate(0.3, OrbitalElements(1.0, 1.0, 1.0, 0.1), OrbitalOrientation(0.0, 0.0, 0.0, 0.0, 0.0, 0.1));
+        panic_unless_recovery_is_accurate(0.3, OrbitalElements(0.9, 1.0, 1.0, 0.1), OrbitalOrientation(0.0, 0.0, 0.0, 0.0, 0.1, 0.0));
+        panic_unless_recovery_is_accurate(0.3, OrbitalElements(1.0, 0.9, 1.0, 0.1), OrbitalOrientation(0.0, 0.0, 0.0, 0.1, 0.0, 0.0));
+        panic_unless_recovery_is_accurate(0.3, OrbitalElements(1.0, 1.0, 0.9, 0.1), OrbitalOrientation(0.0, 0.0, 0.1, 0.0, 0.0, 0.0));
+        panic_unless_recovery_is_accurate(0.3, OrbitalElements(1.0, 1.0, 1.0, 0.9), OrbitalOrientation(0.0, 0.1, 0.0, 0.0, 0.0, 0.0));
+        panic_unless_recovery_is_accurate(0.3, OrbitalElements(1.0, 1.0, 1.0, 0.1), OrbitalOrientation(0.1, 0.0, 0.0, 0.0, 0.0, 0.0));
     }
 }
