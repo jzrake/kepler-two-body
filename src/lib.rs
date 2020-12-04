@@ -22,19 +22,19 @@ impl std::error::Error for UboundOrbitalState {}
 
 
 // ============================================================================
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug)] #[cfg_attr(feature="hdf5", repr(C), derive(hdf5::H5Type))]
 pub struct PointMass(pub f64, pub f64, pub f64, pub f64, pub f64);
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug)] #[cfg_attr(feature="hdf5", repr(C), derive(hdf5::H5Type))]
 pub struct OrbitalState(pub PointMass, pub PointMass);
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug)] #[cfg_attr(feature="hdf5", repr(C), derive(hdf5::H5Type))]
 pub struct OrbitalElements(pub f64, pub f64, pub f64, pub f64);
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug)] #[cfg_attr(feature="hdf5", repr(C), derive(hdf5::H5Type))]
 pub struct OrbitalOrientation(pub f64, pub f64, pub f64, pub f64, pub f64, pub f64);
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug)] #[cfg_attr(feature="hdf5", repr(C), derive(hdf5::H5Type))]
 pub struct OrbitalParameters(pub OrbitalElements, pub OrbitalOrientation);
 
 
