@@ -1,4 +1,4 @@
-use std::f64::consts::{PI};
+use std::f64::consts::PI;
 static G: f64 = 1.0;
 
 
@@ -272,6 +272,22 @@ impl OrbitalState
         return self.transform(orientation);
     }
 
+    /**
+     * Return a new orbital state vector if this one is perturbed by the given
+     * masses and momenta.
+     *
+     * * dm1  -    Mass added to the primary
+     * * dm2  -    Mass added to the secondary
+     * * dpx1 -    Force (x) added to the primary
+     * * dpy2 -    Force (y) added to the secondary
+     * * dpx1 -    Force (x) added to the primary
+     * * dpy2 -    Force (y) added to the secondary
+     */
+    pub fn perturb(self, dm1: f64, dm2: f64, dpx1: f64, dpx2: f64, dpy1: f64, dpy2: f64) -> Self
+    {
+        Self(self.0.perturb_mass_and_momentum(dm1, dpx1, dpy1), self.1.perturb_mass_and_momentum(dm2, dpx2, dpy2))
+    }
+
     pub fn recover_orbital_parameters(self, t: f64) -> Result<OrbitalParameters, UboundOrbitalState>
     {
         let c1 = self.0;
@@ -434,6 +450,25 @@ impl OrbitalElements
     pub fn orbital_state_from_time_and_orientation(self, t: f64, o: OrbitalOrientation) -> OrbitalState
     {
         self.orbital_state_from_time(t - o.periapse_time()).transform(o)
+    }
+
+    /**
+     * Return the new orbital elements if a particle with these orbital elements
+     * is perturbed by the given masses and momenta.
+     *
+     * * t    -    The time
+     * * dm1  -    Mass added to the primary
+     * * dm2  -    Mass added to the secondary
+     * * dpx1 -    Force (x) added to the primary
+     * * dpy2 -    Force (y) added to the secondary
+     * * dpx1 -    Force (x) added to the primary
+     * * dpy2 -    Force (y) added to the secondary
+     */
+    pub fn perturb(self, t: f64, dm1: f64, dm2: f64, dpx1: f64, dpx2: f64, dpy1: f64, dpy2: f64) -> Result<Self, UboundOrbitalState>
+    {
+        let s0 = self.orbital_state_from_time(t);
+        let s1 = s0.perturb(dm1, dm2, dpx1, dpx2, dpy1, dpy2);
+        Ok(s1.recover_orbital_parameters(t)?.0)
     }
 }
 
