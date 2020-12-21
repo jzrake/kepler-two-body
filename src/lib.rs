@@ -165,8 +165,8 @@ impl PointMass
     {
         let mut p = self;
         p.0 += dm;
-        p.3 += dpx / self.mass();
-        p.4 += dpy / self.mass();
+        p.3 += (dpx - self.velocity_x() * dm) / self.mass(); // dv = (dp - v dm) / m
+        p.4 += (dpy - self.velocity_y() * dm) / self.mass();
         return p;
     }
 }
