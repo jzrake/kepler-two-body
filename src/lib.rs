@@ -22,19 +22,29 @@ impl std::error::Error for UboundOrbitalState {}
 
 
 // ============================================================================
-#[derive(Clone, Copy, Debug)] #[cfg_attr(feature="hdf5", repr(C), derive(hdf5::H5Type))]
+#[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature="hdf5", repr(C), derive(hdf5::H5Type))]
+#[cfg_attr(feature="serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PointMass(pub f64, pub f64, pub f64, pub f64, pub f64);
 
-#[derive(Clone, Copy, Debug)] #[cfg_attr(feature="hdf5", repr(C), derive(hdf5::H5Type))]
+#[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature="hdf5", repr(C), derive(hdf5::H5Type))]
+#[cfg_attr(feature="serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct OrbitalState(pub PointMass, pub PointMass);
 
-#[derive(Clone, Copy, Debug)] #[cfg_attr(feature="hdf5", repr(C), derive(hdf5::H5Type))]
+#[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature="hdf5", repr(C), derive(hdf5::H5Type))]
+#[cfg_attr(feature="serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct OrbitalElements(pub f64, pub f64, pub f64, pub f64);
 
-#[derive(Clone, Copy, Debug)] #[cfg_attr(feature="hdf5", repr(C), derive(hdf5::H5Type))]
+#[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature="hdf5", repr(C), derive(hdf5::H5Type))]
+#[cfg_attr(feature="serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct OrbitalOrientation(pub f64, pub f64, pub f64, pub f64, pub f64, pub f64);
 
-#[derive(Clone, Copy, Debug)] #[cfg_attr(feature="hdf5", repr(C), derive(hdf5::H5Type))]
+#[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature="hdf5", repr(C), derive(hdf5::H5Type))]
+#[cfg_attr(feature="serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct OrbitalParameters(pub OrbitalElements, pub OrbitalOrientation);
 
 
