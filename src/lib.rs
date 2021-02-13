@@ -8,10 +8,8 @@ static G: f64 = 1.0;
 #[derive(Debug)]
 pub struct UboundOrbitalState {}
 
-impl std::fmt::Display for UboundOrbitalState
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result
-    {
+impl std::fmt::Display for UboundOrbitalState {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "orbital state vector does not correspond to a bound orbit")
     }
 }
@@ -21,38 +19,71 @@ impl std::error::Error for UboundOrbitalState {}
 
 
 
-// ============================================================================
+/**
+ * Represents a single gravitating point mass: m, x, y, vx, vy
+ */
 #[derive(Clone, Copy, Debug)]
 #[cfg_attr(feature="hdf5", repr(C), derive(hdf5::H5Type))]
 #[cfg_attr(feature="serde", derive(serde::Serialize, serde::Deserialize))]
+
 pub struct PointMass(pub f64, pub f64, pub f64, pub f64, pub f64);
 
+
+
+
+/**
+ * Represents two point masses on a bound orbit
+ */
 #[derive(Clone, Copy, Debug)]
 #[cfg_attr(feature="hdf5", repr(C), derive(hdf5::H5Type))]
 #[cfg_attr(feature="serde", derive(serde::Serialize, serde::Deserialize))]
+
 pub struct OrbitalState(pub PointMass, pub PointMass);
 
+
+
+
+/**
+ * Represents the orbital elements of a two-body orbit: a, M, q, e
+ */
 #[derive(Clone, Copy, Debug)]
 #[cfg_attr(feature="hdf5", repr(C), derive(hdf5::H5Type))]
 #[cfg_attr(feature="serde", derive(serde::Serialize, serde::Deserialize))]
+
 pub struct OrbitalElements(pub f64, pub f64, pub f64, pub f64);
 
+
+
+
+/**
+ * Represents the 2d orientation of a binary system, with a CM position and
+ * velocity, an eccentricity vector (periapse argument), and a time of last
+ * periapse
+ */
 #[derive(Clone, Copy, Debug)]
 #[cfg_attr(feature="hdf5", repr(C), derive(hdf5::H5Type))]
 #[cfg_attr(feature="serde", derive(serde::Serialize, serde::Deserialize))]
+
 pub struct OrbitalOrientation(pub f64, pub f64, pub f64, pub f64, pub f64, pub f64);
 
+
+
+
+/**
+ * Represents an extended orbit as a combination of the orbital elements and the
+ * orbital orientation
+ */
 #[derive(Clone, Copy, Debug)]
 #[cfg_attr(feature="hdf5", repr(C), derive(hdf5::H5Type))]
 #[cfg_attr(feature="serde", derive(serde::Serialize, serde::Deserialize))]
+
 pub struct OrbitalParameters(pub OrbitalElements, pub OrbitalOrientation);
 
 
 
 
 // ============================================================================
-impl PointMass
-{
+impl PointMass {
     pub fn mass          (self) -> f64 { self.0 }
     pub fn position_x    (self) -> f64 { self.1 }
     pub fn position_y    (self) -> f64 { self.2 }
@@ -64,8 +95,7 @@ impl PointMass
 
 
 // ============================================================================
-impl OrbitalElements
-{
+impl OrbitalElements {
     pub fn semimajor_axis(self) -> f64 { self.0 }
     pub fn total_mass    (self) -> f64 { self.1 }
     pub fn mass_ratio    (self) -> f64 { self.2 }
@@ -76,8 +106,7 @@ impl OrbitalElements
 
 
 // ============================================================================
-impl OrbitalOrientation
-{
+impl OrbitalOrientation {
     pub fn cm_position_x    (self) -> f64 { self.0 }
     pub fn cm_position_y    (self) -> f64 { self.1 }
     pub fn cm_velocity_x    (self) -> f64 { self.2 }
@@ -90,8 +119,7 @@ impl OrbitalOrientation
 
 
 // ============================================================================
-impl OrbitalParameters
-{
+impl OrbitalParameters {
     pub fn elements    (self) -> OrbitalElements    { self.0 }
     pub fn orientation (self) -> OrbitalOrientation { self.1 }
 }
@@ -100,17 +128,14 @@ impl OrbitalParameters
 
 
 // ============================================================================
-fn solve_newton_rapheson<F: Fn(f64) -> f64, G: Fn(f64) -> f64>(f: F, g: G, mut x: f64) -> f64
-{
-    while f64::abs(f(x)) > 1e-12
-    {
+fn solve_newton_rapheson<F: Fn(f64) -> f64, G: Fn(f64) -> f64>(f: F, g: G, mut x: f64) -> f64 {
+    while f64::abs(f(x)) > 1e-12 {
         x -= f(x) / g(x);
     }
     return x;
 }
 
-fn clamp_between_zero_and_one(x: f64) -> f64
-{
+fn clamp_between_zero_and_one(x: f64) -> f64 {
     f64::min(1.0, f64::max(0.0, x))
 }
 
@@ -118,66 +143,59 @@ fn clamp_between_zero_and_one(x: f64) -> f64
 
 
 // ============================================================================
-impl PointMass
-{
-    pub fn kinetic_energy(self) -> f64
-    {
+impl PointMass {
+
+    pub fn kinetic_energy(self) -> f64 {
         let vx = self.velocity_x();
         let vy = self.velocity_y();
-        return 0.5 * self.mass() * (vx * vx + vy * vy);
+        0.5 * self.mass() * (vx * vx + vy * vy)
     }
 
-    pub fn angular_momentum(self) -> f64
-    {
+    pub fn angular_momentum(self) -> f64 {
         let x  = self.position_x();
         let y  = self.position_y();
         let vx = self.velocity_x();
         let vy = self.velocity_y();
-        return self.mass() * (x * vy - y * vx);
+        self.mass() * (x * vy - y * vx)
     }
 
-    pub fn gravitational_potential(self, x: f64, y: f64, softening_length: f64) -> f64
-    {
+    pub fn gravitational_potential(self, x: f64, y: f64, softening_length: f64) -> f64 {
         let dx = x - self.position_x();
         let dy = y - self.position_y();
         let r2 = dx * dx + dy * dy;
         let s2 = softening_length.powi(2);
-        return -G * self.mass() / (r2 + s2).sqrt();
+        -G * self.mass() / (r2 + s2).sqrt()
     }
 
-    pub fn gravitational_acceleration(self, x: f64, y: f64, softening_length: f64) -> [f64; 2]
-    {
+    pub fn gravitational_acceleration(self, x: f64, y: f64, softening_length: f64) -> [f64; 2] {
         let dx = x - self.position_x();
         let dy = y - self.position_y();
         let r2 = dx * dx + dy * dy;
         let s2 = softening_length.powi(2);
         let ax = -G * self.mass() / (r2 + s2).powf(1.5) * dx;
         let ay = -G * self.mass() / (r2 + s2).powf(1.5) * dy;
-        return [ax, ay];
+        [ax, ay]
     }
 
-    pub fn perturb_mass(self, dm: f64) -> PointMass
-    {
+    pub fn perturb_mass(self, dm: f64) -> PointMass {
         let mut p = self;
         p.0 += dm;
-        return p;
+        p
     }
 
-    pub fn perturb_momentum(self, dpx: f64, dpy: f64) -> PointMass
-    {
+    pub fn perturb_momentum(self, dpx: f64, dpy: f64) -> PointMass {
         let mut p = self;
         p.3 += dpx / self.mass();
         p.4 += dpy / self.mass();
-        return p;
+        p
     }
 
-    pub fn perturb_mass_and_momentum(self, dm: f64, dpx: f64, dpy: f64) -> PointMass
-    {
+    pub fn perturb_mass_and_momentum(self, dm: f64, dpx: f64, dpy: f64) -> PointMass {
         let mut p = self;
         p.0 += dm;
         p.3 += (dpx - self.velocity_x() * dm) / self.mass(); // dv = (dp - v dm) / m
         p.4 += (dpy - self.velocity_y() * dm) / self.mass();
-        return p;
+        p
     }
 }
 
@@ -185,45 +203,38 @@ impl PointMass
 
 
 // ============================================================================
-impl OrbitalState
-{
-    pub fn total_mass(self) -> f64
-    {
-        return self.0.mass() + self.1.mass();
+impl OrbitalState {
+
+    pub fn total_mass(self) -> f64 {
+        self.0.mass() + self.1.mass()
     }
 
-    pub fn mass_ratio(self) -> f64
-    {
-        return self.1.mass() / self.0.mass();
+    pub fn mass_ratio(self) -> f64 {
+        self.1.mass() / self.0.mass()
     }
 
-    pub fn separation(self) -> f64
-    {
+    pub fn separation(self) -> f64 {
         let x1 = self.0.position_x();
         let y1 = self.0.position_y();
         let x2 = self.1.position_x();
         let y2 = self.1.position_y();
-        return f64::sqrt((x2 - x1).powi(2) + (y2 - y1).powi(2));
+        f64::sqrt((x2 - x1).powi(2) + (y2 - y1).powi(2))
     }
 
-    pub fn kinetic_energy(self) -> f64
-    {
-        return self.0.kinetic_energy() + self.1.kinetic_energy();
+    pub fn kinetic_energy(self) -> f64 {
+        self.0.kinetic_energy() + self.1.kinetic_energy()
     }
 
-    pub fn angular_momentum(self) -> f64
-    {
-        return self.0.angular_momentum() + self.1.angular_momentum();
+    pub fn angular_momentum(self) -> f64 {
+        self.0.angular_momentum() + self.1.angular_momentum()
     }
 
-    pub fn gravitational_potential(self, x: f64, y: f64, softening_length: f64) -> f64
-    {
-        return self.0.gravitational_potential(x, y, softening_length) + self.1.gravitational_potential(x, y, softening_length);
+    pub fn gravitational_potential(self, x: f64, y: f64, softening_length: f64) -> f64 {
+        self.0.gravitational_potential(x, y, softening_length) + self.1.gravitational_potential(x, y, softening_length)
     }
 
-    pub fn total_energy(self) -> f64
-    {
-        return self.kinetic_energy() - G * self.0.mass() * self.1.mass() / self.separation();
+    pub fn total_energy(self) -> f64 {
+        self.kinetic_energy() - G * self.0.mass() * self.1.mass() / self.separation()
     }
 
     /**
@@ -237,8 +248,7 @@ impl OrbitalState
      * # Arguments
      * * o      - The orbital orientation to transform to
      */
-    pub fn transform(self, o: OrbitalOrientation) -> OrbitalState
-    {
+    pub fn transform(self, o: OrbitalOrientation) -> OrbitalState {
         let m1  = self.0.mass();
         let x1  = self.0.position_x();
         let y1  = self.0.position_y();
@@ -265,7 +275,7 @@ impl OrbitalState
         let c1 = PointMass(m1, x1p, y1p, vx1p, vy1p);
         let c2 = PointMass(m2, x2p, y2p, vx2p, vy2p);
 
-        return OrbitalState(c1, c2);
+        OrbitalState(c1, c2)
     }
 
     /**
@@ -276,10 +286,9 @@ impl OrbitalState
      * * angle  - The angle to rotate by
      *
      */
-    pub fn rotate(self, angle: f64) -> OrbitalState
-    {
+    pub fn rotate(self, angle: f64) -> OrbitalState {
         let orientation = OrbitalOrientation(0.0, 0.0, 0.0, 0.0, angle, 0.0);
-        return self.transform(orientation);
+        self.transform(orientation)
     }
 
     /**
@@ -293,13 +302,11 @@ impl OrbitalState
      * * dpy1 -    Force (y) added to the primary
      * * dpy2 -    Force (y) added to the secondary
      */
-    pub fn perturb(self, dm1: f64, dm2: f64, dpx1: f64, dpx2: f64, dpy1: f64, dpy2: f64) -> Self
-    {
+    pub fn perturb(self, dm1: f64, dm2: f64, dpx1: f64, dpx2: f64, dpy1: f64, dpy2: f64) -> Self {
         Self(self.0.perturb_mass_and_momentum(dm1, dpx1, dpy1), self.1.perturb_mass_and_momentum(dm2, dpx2, dpy2))
     }
 
-    pub fn recover_orbital_parameters(self, t: f64) -> Result<OrbitalParameters, UboundOrbitalState>
-    {
+    pub fn recover_orbital_parameters(self, t: f64) -> Result<OrbitalParameters, UboundOrbitalState> {
         let c1 = self.0;
         let c2 = self.1;
 
@@ -340,7 +347,7 @@ impl OrbitalState
         let h = t1 + t2 - G * m1 * m2 / r;
 
         if h >= 0.0 {
-            return Err(UboundOrbitalState{});
+            return Err(UboundOrbitalState{})
         }
 
         // semi-major, semi-minor axes; eccentricity, apsides
@@ -387,22 +394,19 @@ impl OrbitalState
 
 
 // ============================================================================
-impl OrbitalElements
-{
-    pub fn omega(self) -> f64
-    {
+impl OrbitalElements {
+
+    pub fn omega(self) -> f64 {
         let m = self.total_mass();
         let a = self.semimajor_axis();
         return f64::sqrt(G * m / a / a / a);
     }
 
-    pub fn period(self) -> f64
-    {
+    pub fn period(self) -> f64 {
         return 2.0 * PI / self.omega();
     }
 
-    pub fn angular_momentum(self) -> f64
-    {
+    pub fn angular_momentum(self) -> f64 {
         let a = self.semimajor_axis();
         let m = self.total_mass();
         let q = self.mass_ratio();
@@ -412,8 +416,7 @@ impl OrbitalElements
         return m1 * m2 / m * f64::sqrt(G * m * a * (1.0 - e * e));
     }
 
-    pub fn eccentric_anomaly(self, t: f64) -> f64
-    {
+    pub fn eccentric_anomaly(self, t: f64) -> f64 {
         let e = self.eccentricity();
         let n = self.omega() * t;              // n := mean anomaly M
         let f = |k| k   - e * f64::sin(k) - n; // k := eccentric anomaly E
@@ -421,8 +424,7 @@ impl OrbitalElements
         return solve_newton_rapheson(f, g, n);
     }
 
-    pub fn orbital_state_from_eccentric_anomaly(self, eccentric_anomaly: f64) -> OrbitalState
-    {
+    pub fn orbital_state_from_eccentric_anomaly(self, eccentric_anomaly: f64) -> OrbitalState {
         let a   = self.semimajor_axis();
         let m   = self.total_mass();
         let q   = self.mass_ratio();
@@ -445,8 +447,7 @@ impl OrbitalElements
         return OrbitalState(c1, c2);
     }
 
-    pub fn orbital_state_from_time(self, t: f64) -> OrbitalState
-    {
+    pub fn orbital_state_from_time(self, t: f64) -> OrbitalState {
         self.orbital_state_from_eccentric_anomaly(self.eccentric_anomaly(t))
     }
 
@@ -457,8 +458,7 @@ impl OrbitalElements
      * * t  -    The time
      * * o  -    The orbital orientation
      */
-    pub fn orbital_state_from_time_and_orientation(self, t: f64, o: OrbitalOrientation) -> OrbitalState
-    {
+    pub fn orbital_state_from_time_and_orientation(self, t: f64, o: OrbitalOrientation) -> OrbitalState {
         self.orbital_state_from_time(t - o.periapse_time()).transform(o)
     }
 
@@ -474,8 +474,7 @@ impl OrbitalElements
      * * dpy1 -    Force (y) added to the primary
      * * dpy2 -    Force (y) added to the secondary
      */
-    pub fn perturb(self, t: f64, dm1: f64, dm2: f64, dpx1: f64, dpx2: f64, dpy1: f64, dpy2: f64) -> Result<Self, UboundOrbitalState>
-    {
+    pub fn perturb(self, t: f64, dm1: f64, dm2: f64, dpx1: f64, dpx2: f64, dpy1: f64, dpy2: f64) -> Result<Self, UboundOrbitalState> {
         let s0 = self.orbital_state_from_time(t);
         let s1 = s0.perturb(dm1, dm2, dpx1, dpx2, dpy1, dpy2);
         Ok(s1.recover_orbital_parameters(t)?.0)
@@ -516,12 +515,10 @@ impl OrbitalParameters   { pub fn small(self, e: f64) -> bool { self.0.small(e) 
 
 // ============================================================================
 #[cfg(test)]
-mod tests
-{
+mod tests {
     use super::*;
 
-    fn panic_unless_recovery_is_accurate(t: f64, elements: OrbitalElements, orientation: OrbitalOrientation)
-    {
+    fn panic_unless_recovery_is_accurate(t: f64, elements: OrbitalElements, orientation: OrbitalOrientation) {
         let parameters = OrbitalParameters(elements, orientation);
         let state = elements.orbital_state_from_time_and_orientation(t, orientation);
         let recovered_parameters = state.recover_orbital_parameters(t).unwrap();
@@ -529,8 +526,7 @@ mod tests
     }
 
     #[test]
-    fn can_recover_parameters_for_standard_oriented_orbits()
-    {
+    fn can_recover_parameters_for_standard_oriented_orbits() {
         panic_unless_recovery_is_accurate(0.3, OrbitalElements(1.0, 1.0, 1.0, 0.1), OrbitalOrientation(0.0, 0.0, 0.0, 0.0, 0.0, 0.0));
         panic_unless_recovery_is_accurate(0.3, OrbitalElements(0.9, 1.0, 1.0, 0.1), OrbitalOrientation(0.0, 0.0, 0.0, 0.0, 0.0, 0.0));
         panic_unless_recovery_is_accurate(0.3, OrbitalElements(1.0, 0.9, 1.0, 0.1), OrbitalOrientation(0.0, 0.0, 0.0, 0.0, 0.0, 0.0));
@@ -539,8 +535,7 @@ mod tests
     }
 
     #[test]
-    fn can_recover_parameters_for_nonstandard_oriented_orbits()
-    {
+    fn can_recover_parameters_for_nonstandard_oriented_orbits() {
         panic_unless_recovery_is_accurate(0.3, OrbitalElements(1.0, 1.0, 1.0, 0.1), OrbitalOrientation(0.0, 0.0, 0.0, 0.0, 0.0, 0.1));
         panic_unless_recovery_is_accurate(0.3, OrbitalElements(0.9, 1.0, 1.0, 0.1), OrbitalOrientation(0.0, 0.0, 0.0, 0.0, 0.1, 0.0));
         panic_unless_recovery_is_accurate(0.3, OrbitalElements(1.0, 0.9, 1.0, 0.1), OrbitalOrientation(0.0, 0.0, 0.0, 0.1, 0.0, 0.0));
