@@ -6,11 +6,11 @@ static G: f64 = 1.0;
 
 // ============================================================================
 #[derive(Debug)]
-pub struct UnboundOrbitalState {}
+pub struct UnboundOrbitalState(OrbitalState);
 
 impl std::fmt::Display for UnboundOrbitalState {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "orbital state vector does not correspond to a bound orbit")
+        write!(f, "unbound orbital state, energy = {:+.6e}", self.0.total_energy())
     }
 }
 
@@ -347,7 +347,7 @@ impl OrbitalState {
         let h = t1 + t2 - G * m1 * m2 / r;
 
         if h >= 0.0 {
-            return Err(UnboundOrbitalState{})
+            return Err(UnboundOrbitalState(self))
         }
 
         // semi-major, semi-minor axes; eccentricity, apsides
