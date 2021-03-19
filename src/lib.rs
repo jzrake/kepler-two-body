@@ -5,7 +5,7 @@ static G: f64 = 1.0;
 
 
 // ============================================================================
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UnboundOrbitalState(OrbitalState);
 
 impl std::fmt::Display for UnboundOrbitalState {
