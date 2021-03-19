@@ -6,15 +6,15 @@ static G: f64 = 1.0;
 
 // ============================================================================
 #[derive(Debug)]
-pub struct UboundOrbitalState {}
+pub struct UnboundOrbitalState {}
 
-impl std::fmt::Display for UboundOrbitalState {
+impl std::fmt::Display for UnboundOrbitalState {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "orbital state vector does not correspond to a bound orbit")
     }
 }
 
-impl std::error::Error for UboundOrbitalState {}
+impl std::error::Error for UnboundOrbitalState {}
 
 
 
@@ -306,7 +306,7 @@ impl OrbitalState {
         Self(self.0.perturb_mass_and_momentum(dm1, dpx1, dpy1), self.1.perturb_mass_and_momentum(dm2, dpx2, dpy2))
     }
 
-    pub fn recover_orbital_parameters(self, t: f64) -> Result<OrbitalParameters, UboundOrbitalState> {
+    pub fn recover_orbital_parameters(self, t: f64) -> Result<OrbitalParameters, UnboundOrbitalState> {
         let c1 = self.0;
         let c2 = self.1;
 
@@ -347,7 +347,7 @@ impl OrbitalState {
         let h = t1 + t2 - G * m1 * m2 / r;
 
         if h >= 0.0 {
-            return Err(UboundOrbitalState{})
+            return Err(UnboundOrbitalState{})
         }
 
         // semi-major, semi-minor axes; eccentricity, apsides
@@ -474,7 +474,7 @@ impl OrbitalElements {
      * * dpy1 -    Force (y) added to the primary
      * * dpy2 -    Force (y) added to the secondary
      */
-    pub fn perturb(self, t: f64, dm1: f64, dm2: f64, dpx1: f64, dpx2: f64, dpy1: f64, dpy2: f64) -> Result<Self, UboundOrbitalState> {
+    pub fn perturb(self, t: f64, dm1: f64, dm2: f64, dpx1: f64, dpx2: f64, dpy1: f64, dpy2: f64) -> Result<Self, UnboundOrbitalState> {
         let s0 = self.orbital_state_from_time(t);
         let s1 = s0.perturb(dm1, dm2, dpx1, dpx2, dpy1, dpy2);
         Ok(s1.recover_orbital_parameters(t)?.0)
